@@ -4,11 +4,22 @@ from fastapi.responses import JSONResponse
 import shutil
 import os
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials = True,
+    allow_methods=['*'],
+    allow_headers=['*']
+)
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile):
@@ -21,5 +32,5 @@ async def upload_file(file: UploadFile):
     return JSONResponse({"uri": uri})
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
     

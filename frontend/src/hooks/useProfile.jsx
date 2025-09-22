@@ -1,17 +1,20 @@
 // src/hooks/useContract.ts
 import { ethers } from "ethers";
-import ProfileABI from ".ABI/Profile.json"; 
+import Profle from "../ABI/Profile.json"
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_PROFILE_CONTRACT_ADRRESS; 
 
-export function useProfileContract() {
-  if (!window.ethereum) {
+export default async function useProfileContract() {
+   if (!window.ethereum) {
     throw new Error("MetaMask not found. Please install it.");
   }
 
-  const provider = new ethers.BrowserProvider(window.ethereum); // ethers v6
-  const signer = provider.getSigner();
-  const contract = new ethers.Contract(CONTRACT_ADDRESS, ProfileABI.abi, signer);
+  // Ask MetaMask for permission
+  await window.ethereum.request({ method: "eth_requestAccounts" });
+
+  const provider = new ethers.BrowserProvider(window.ethereum); // v6
+  const signer = await provider.getSigner(); // must await!
+  const contract = new ethers.Contract(CONTRACT_ADDRESS, Profle.abi, signer);
 
   return contract;
 }
