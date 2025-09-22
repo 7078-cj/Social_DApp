@@ -4,6 +4,8 @@ import viteLogo from '/vite.svg'
 import './App.css'
 import ProfileForm from './Components/ProfileForm'
 import ProfileView from './Components/ProfileView'
+import CreatePostForm from './Components/CreatePostForm'
+import PostsList from './Components/PostList'
 
 function App() {
   
@@ -12,6 +14,8 @@ function App() {
     <>
       <ProfileForm/>
       <ProfileView/>
+      <CreatePostForm/>
+      <PostsList/>
     </>
   )
 }

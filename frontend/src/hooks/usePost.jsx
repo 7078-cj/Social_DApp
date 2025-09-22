@@ -4,7 +4,7 @@ import Posts from "../ABI/Posts.json"
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_POSTS_CONTRACT_ADRRESS; 
 
-export default async function usePostsContract() {
+export default async function usePostsContract(setAccount = null) {
   if (!window.ethereum) {
     throw new Error("MetaMask not found. Please install it.");
   }
@@ -13,6 +13,10 @@ export default async function usePostsContract() {
 
   const provider = new ethers.BrowserProvider(window.ethereum); // ethers v6
   const signer = await provider.getSigner();
+  if (setAccount){
+    const address = await signer.getAddress();
+    setAccount(address);
+  }
   const contract = new ethers.Contract(CONTRACT_ADDRESS, Posts.abi, signer);
 
   return contract;
