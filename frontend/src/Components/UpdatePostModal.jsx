@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Modal, TextInput, Textarea, Button } from "@mantine/core";
+import ContractContext from "../Contexts/Contracts";
 
 function UpdatePostModal({ opened, onClose, post, onUpdate }) {
   const [caption, setCaption] = useState("");
@@ -7,6 +8,7 @@ function UpdatePostModal({ opened, onClose, post, onUpdate }) {
   const [file, setFile] = useState(null);
   const [image, setImage] = useState("");
   const [loading, setLoading] = useState(false);
+  const {handleUpdate} = useContext(ContractContext)
 
   useEffect(() => {
     if (post) {
@@ -42,8 +44,8 @@ function UpdatePostModal({ opened, onClose, post, onUpdate }) {
         imageURI = data.uri;
       }
 
-      // 2. Call parent update handler (fix param order!)
-      await onUpdate(post.id, caption, content, imageURI);
+      
+      await handleUpdate(post.id,  content, imageURI, caption);
 
       onClose();
     } catch (err) {

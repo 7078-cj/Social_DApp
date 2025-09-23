@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import UpdatePostModal from "./UpdatePostModal";
 import { Heart, MessageCircle, Edit, Trash2, ThumbsUp, ThumbsDown } from "lucide-react";
 
-function PostCard({ post, account, onUpdate, onDelete, onLike, onUnlike }) {
+function PostCard({ post, account,  onDelete, onLike, onUnlike }) {
   const isAuthor = post.author.toLowerCase() === account?.toLowerCase();
   const [updateOpen, setUpdateOpen] = useState(false);
 
@@ -80,7 +80,7 @@ function PostCard({ post, account, onUpdate, onDelete, onLike, onUnlike }) {
         opened={updateOpen}
         onClose={() => setUpdateOpen(false)}
         post={post}
-        onUpdate={onUpdate}
+        
       />
     </div>
   );

@@ -4,7 +4,7 @@ import UpdatePostModal from "./UpdatePostModal";
 import ContractContext from "../Contexts/Contracts";
 
 function PostsList() {
-  const { posts, account, postsContract, handleDelete, handleLike, handleUnlike, handleUpdate } = useContext(ContractContext);
+  const { posts, account, postsContract, handleDelete, handleLike, handleUnlike} = useContext(ContractContext);
 
   const [selectedPost, setSelectedPost] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
@@ -38,7 +38,6 @@ function PostsList() {
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
         post={selectedPost}
-        onUpdate={handleUpdate}
       />
     </div>
   );
