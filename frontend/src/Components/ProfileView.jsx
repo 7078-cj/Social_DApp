@@ -1,31 +1,71 @@
 import React, { useContext, useState } from "react";
 import ContractContext from "../Contexts/Contracts";
+import PostCard from "./PostCard";
 
 function ProfileView({ profile }) {
-  const { account, profileContract, fetchProfile } = useContext(ContractContext);
+  const {
+    account,
+    profileContract,
+    posts,
+    fetchProfile,
+    postsContract,
+    fetchPosts,
+     handleDelete, handleLike, handleUnlike, handleUpdate
+  } = useContext(ContractContext);
 
   const [editing, setEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(profile.displayName);
-  const [bio, setBio] = useState(profile.bio);
-  const [avatarURI, setAvatarURI] = useState(profile.avatarURI);
+  const [displayName, setDisplayName] = useState(profile?.displayName || "");
+  const [bio, setBio] = useState(profile?.bio || "");
+  const [file, setFile] = useState(null);
 
-  const isOwner = account && profile && account.toLowerCase() === profile.owner?.toLowerCase();
+  const isOwner =
+    account && profile && account.toLowerCase() === profile.account?.toLowerCase();
 
-  const handleUpdate = async () => {
+  // ---- Profile Update Flow with FastAPI Upload ----
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!file) {
+      alert("Please upload an avatar!");
+      return;
+    }
+
     try {
-      const tx = await profileContract.updateProfile(displayName, bio, avatarURI);
+      // Upload image to FastAPI
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("http://localhost:8000/upload/", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      const avatarURI = data.uri;
+
+      // Update blockchain profile
+      const tx = await profileContract.updateProfile(
+        displayName,
+        bio,
+        avatarURI
+      );
       await tx.wait();
 
-      await fetchProfile(account); 
+      await fetchProfile(account);
       setEditing(false);
+      alert("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
+      alert("Error updating profile");
     }
   };
 
+  // ---- Editing Mode ----
   if (editing) {
     return (
-      <div className="p-4 border rounded w-96 mx-auto mt-6 shadow">
+      <form
+        onSubmit={handleSubmit}
+        className="p-4 border rounded w-96 mx-auto mt-6 shadow"
+      >
         <h2 className="text-xl font-bold text-center mb-4">Edit Profile</h2>
         <input
           type="text"
@@ -41,31 +81,31 @@ function ProfileView({ profile }) {
           className="border rounded w-full p-2 mb-2"
         />
         <input
-          type="text"
-          value={avatarURI}
-          onChange={(e) => setAvatarURI(e.target.value)}
-          placeholder="Avatar URL"
+          type="file"
+          onChange={(e) => setFile(e.target.files[0])}
           className="border rounded w-full p-2 mb-2"
         />
 
         <div className="flex justify-between mt-2">
           <button
+            type="button"
             onClick={() => setEditing(false)}
             className="px-4 py-2 rounded bg-gray-400 text-white"
           >
             Cancel
           </button>
           <button
-            onClick={handleUpdate}
+            type="submit"
             className="px-4 py-2 rounded bg-blue-600 text-white"
           >
             Save
           </button>
         </div>
-      </div>
+      </form>
     );
   }
 
+  // ---- Normal Profile View ----
   return (
     <div className="p-4 border rounded w-96 mx-auto mt-6 shadow">
       <img
@@ -84,6 +124,27 @@ function ProfileView({ profile }) {
           Edit Profile
         </button>
       )}
+
+      {/* User’s Posts */}
+      <div className="mt-6">
+        <h3 className="text-lg font-bold mb-2">My Posts</h3>
+        {posts
+          .filter(
+            (post) =>
+              post.author?.toLowerCase() === profile.account?.toLowerCase()
+          )
+          .map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              account={account}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+              onLike={handleLike}
+              onUnlike={handleUnlike}
+            />
+          ))}
+      </div>
     </div>
   );
 }

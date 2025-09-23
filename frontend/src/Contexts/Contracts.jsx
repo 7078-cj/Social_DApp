@@ -119,6 +119,42 @@ export function Contracts({ children }) {
     };
   }, [postsContract]);
 
+  const handleDelete = async (id) => {
+    try {
+      const tx = await postsContract.deletePost(id);
+      await tx.wait();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdate = async (id, newContent, newImage, newCaption) => {
+    try {
+      const tx = await postsContract.updatePost(id, newContent, newImage, newCaption);
+      await tx.wait();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleLike = async (id) => {
+    try {
+      const tx = await postsContract.likePost(id);
+      await tx.wait();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUnlike = async (id) => {
+    try {
+      const tx = await postsContract.unlikePost(id);
+      await tx.wait();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const context = {
     profileContract,
     postsContract,
@@ -127,6 +163,10 @@ export function Contracts({ children }) {
     loading,
     posts,
     fetchProfile,
+    handleDelete,
+    handleUpdate,
+    handleLike,
+    handleUnlike,
   };
 
   return (
