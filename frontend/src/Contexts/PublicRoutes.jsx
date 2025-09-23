@@ -2,14 +2,14 @@ import React, { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import ContractContext from './Contracts';
 
-function PrivateRoutes() {
+function PublicRoutes() {
   const { profile, loading } = useContext(ContractContext);
 
   if (loading) {
-    return <div>Loading...</div>; 
+    return <div>Loading...</div>;
   }
 
-  return profile ? <Outlet /> : <Navigate to="/register" replace />;
+  return profile ? <Navigate to="/" replace /> : <Outlet />;
 }
 
-export default PrivateRoutes;
+export default PublicRoutes;

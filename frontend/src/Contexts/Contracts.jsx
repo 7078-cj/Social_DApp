@@ -10,12 +10,38 @@ export function Contracts({ children }) {
   const [profileContract, setProfileContract] = useState();
   const [postsContract, setPostsContract] = useState();
   const [account, setAccount] = useState();
-  const [profile, setProfile] = useState();
+  const [profile, setProfile] = useState(
+    () => JSON.parse(localStorage.getItem("profile")) || null
+  );
   const [loading, setLoading] = useState(true);
   const [posts, setPosts] = useState([]);
   const nav = useNavigate();
 
-  
+  const fetchProfile = async (otherAccount = null) => {
+    try {
+      setLoading(true);
+      const data = await profileContract.getProfile(otherAccount ? otherAccount : account);
+
+      if (data && data.exists) {
+        const userProfile = {
+          displayName: data.displayName,
+          bio: data.bio,
+          avatarURI: data.avatarURI,
+        };
+
+        setProfile(userProfile);
+        localStorage.setItem("profile", JSON.stringify(userProfile)); 
+        
+      }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+      setProfile(null);
+      localStorage.removeItem("profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const initContracts = async () => {
       try {
@@ -32,44 +58,18 @@ export function Contracts({ children }) {
     initContracts();
   }, []);
 
- 
   useEffect(() => {
     if (!profileContract || !account) {
       setLoading(false);
       return;
     }
 
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const data = await profileContract.getProfile(account);
-
-        if (data && data.exists) {
-          setProfile({
-            displayName: data.displayName,
-            bio: data.bio,
-            avatarURI: data.avatarURI,
-          });
-          nav('/');
-        } else {
-          setProfile(null);
-        }
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        setProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProfile();
   }, [profileContract, account]);
 
- 
   useEffect(() => {
     if (!postsContract) return;
 
-   
     const loadPosts = async () => {
       const loadedPosts = [];
       let id = 1;
@@ -87,15 +87,12 @@ export function Contracts({ children }) {
 
     loadPosts();
 
-    
-    postsContract.on("PostCreated", async (postId, author, content, imageURI) => {
-      console.log("PostCreated:", postId.toString());
+    postsContract.on("PostCreated", async (postId) => {
       const newPost = await postsContract.getPost(postId);
       setPosts((prev) => [...prev, newPost]);
     });
 
     postsContract.on("PostUpdated", async (postId) => {
-      console.log("PostUpdated:", postId.toString());
       const updatedPost = await postsContract.getPost(postId);
       setPosts((prev) =>
         prev.map((p) => (p.id.toString() === postId.toString() ? updatedPost : p))
@@ -103,12 +100,10 @@ export function Contracts({ children }) {
     });
 
     postsContract.on("PostDeleted", (postId) => {
-      console.log("PostDeleted:", postId.toString());
       setPosts((prev) => prev.filter((p) => p.id.toString() !== postId.toString()));
     });
 
     postsContract.on("PostLiked", async (postId) => {
-      console.log("PostLiked:", postId.toString());
       const updatedPost = await postsContract.getPost(postId);
       setPosts((prev) =>
         prev.map((p) => (p.id.toString() === postId.toString() ? updatedPost : p))
@@ -116,14 +111,12 @@ export function Contracts({ children }) {
     });
 
     postsContract.on("PostUnliked", async (postId) => {
-      console.log("PostUnliked:", postId.toString());
       const updatedPost = await postsContract.getPost(postId);
       setPosts((prev) =>
         prev.map((p) => (p.id.toString() === postId.toString() ? updatedPost : p))
       );
     });
 
-    
     return () => {
       postsContract.removeAllListeners("PostCreated");
       postsContract.removeAllListeners("PostUpdated");
@@ -139,7 +132,8 @@ export function Contracts({ children }) {
     account,
     profile,
     loading,
-    posts, 
+    posts,
+    fetchProfile
   };
 
   return (
