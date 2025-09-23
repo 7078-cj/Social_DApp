@@ -1,68 +1,81 @@
 import React, { useState } from "react";
 import UpdatePostModal from "./UpdatePostModal";
+import { Heart, MessageCircle, Edit, Trash2, ThumbsUp, ThumbsDown } from "lucide-react";
 
 function PostCard({ post, account, onUpdate, onDelete, onLike, onUnlike }) {
   const isAuthor = post.author.toLowerCase() === account?.toLowerCase();
   const [updateOpen, setUpdateOpen] = useState(false);
 
   return (
-    <div className="border p-4 rounded mb-4 shadow">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-md p-5 mb-6 hover:shadow-lg transition">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
         <img
           src={post.profile.avatarURI}
           alt="avatar"
-          className="w-10 h-10 rounded-full object-cover"
+          className="w-12 h-12 rounded-full object-cover border"
         />
         <div>
-          <p className="font-bold">{post.profile.displayName}</p>
+          <p className="font-semibold text-gray-800">{post.profile.displayName}</p>
           <p className="text-xs text-gray-500">{post.author}</p>
         </div>
       </div>
 
-      <h3 className="font-semibold">{post.caption}</h3>
-      <p>{post.content}</p>
+      {/* Content */}
+      <h3 className="text-lg font-semibold text-gray-900">{post.caption}</h3>
+      <p className="text-gray-700 mt-1">{post.content}</p>
+
       {post.imageURI && (
         <img
           src={post.imageURI}
           alt="Post"
-          className="w-64 h-auto mt-2 rounded"
+          className="w-full max-h-96 mt-3 rounded-lg object-cover border"
         />
       )}
-      <p className="text-sm text-gray-600">Likes: {post.likes}</p>
 
-      {isAuthor ? (
-        <div className="flex gap-2 mt-2">
-          <button
-            onClick={() => setUpdateOpen(true)}
-            className="bg-yellow-500 text-white px-3 py-1 rounded"
-          >
-            Update
-          </button>
-          <button
-            onClick={() => onDelete(post.id)}
-            className="bg-red-500 text-white px-3 py-1 rounded"
-          >
-            Delete
-          </button>
-        </div>
-      ) : (
-        <div className="flex gap-2 mt-2">
-          <button
-            onClick={() => onLike(post.id)}
-            className="bg-blue-500 text-white px-3 py-1 rounded"
-          >
-            Like
-          </button>
-          <button
-            onClick={() => onUnlike(post.id)}
-            className="bg-gray-500 text-white px-3 py-1 rounded"
-          >
-            Unlike
-          </button>
-        </div>
-      )}
+      {/* Footer */}
+      <div className="mt-4 flex items-center justify-between text-gray-600 text-sm">
+        <span className="flex items-center gap-1">
+          <Heart className="w-4 h-4 text-red-500" /> {post.likes} Likes
+        </span>
+      </div>
 
-      {/* 🔹 Update Post Modal */}
+      {/* Actions */}
+      <div className="mt-3 flex gap-3">
+        {isAuthor ? (
+          <>
+            <button
+              onClick={() => setUpdateOpen(true)}
+              className="flex items-center gap-1 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition"
+            >
+              <Edit className="w-4 h-4" /> Update
+            </button>
+            <button
+              onClick={() => onDelete(post.id)}
+              className="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
+            >
+              <Trash2 className="w-4 h-4" /> Delete
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => onLike(post.id)}
+              className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
+            >
+              <ThumbsUp className="w-4 h-4" /> Like
+            </button>
+            <button
+              onClick={() => onUnlike(post.id)}
+              className="flex items-center gap-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
+            >
+              <ThumbsDown className="w-4 h-4" /> Unlike
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Update Post Modal */}
       <UpdatePostModal
         opened={updateOpen}
         onClose={() => setUpdateOpen(false)}

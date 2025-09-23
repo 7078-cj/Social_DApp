@@ -8,9 +8,10 @@ function ProfileView({ profile }) {
     profileContract,
     posts,
     fetchProfile,
-    postsContract,
-    fetchPosts,
-     handleDelete, handleLike, handleUnlike, handleUpdate
+    handleDelete,
+    handleLike,
+    handleUnlike,
+    handleUpdate,
   } = useContext(ContractContext);
 
   const [editing, setEditing] = useState(false);
@@ -21,7 +22,7 @@ function ProfileView({ profile }) {
   const isOwner =
     account && profile && account.toLowerCase() === profile.account?.toLowerCase();
 
-  // ---- Profile Update Flow with FastAPI Upload ----
+  // ---- Profile Update ----
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
@@ -30,7 +31,6 @@ function ProfileView({ profile }) {
     }
 
     try {
-      // Upload image to FastAPI
       const formData = new FormData();
       formData.append("file", file);
 
@@ -42,12 +42,7 @@ function ProfileView({ profile }) {
       const data = await res.json();
       const avatarURI = data.uri;
 
-      // Update blockchain profile
-      const tx = await profileContract.updateProfile(
-        displayName,
-        bio,
-        avatarURI
-      );
+      const tx = await profileContract.updateProfile(displayName, bio, avatarURI);
       await tx.wait();
 
       await fetchProfile(account);
@@ -64,39 +59,45 @@ function ProfileView({ profile }) {
     return (
       <form
         onSubmit={handleSubmit}
-        className="p-4 border rounded w-96 mx-auto mt-6 shadow"
+        className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-auto mt-8"
       >
-        <h2 className="text-xl font-bold text-center mb-4">Edit Profile</h2>
+        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
+          Edit Profile
+        </h2>
+
         <input
           type="text"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           placeholder="Display Name"
-          className="border rounded w-full p-2 mb-2"
+          className="w-full border border-gray-300 rounded-lg p-3 mb-3 focus:ring-2 focus:ring-blue-500 outline-none"
         />
         <textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           placeholder="Bio"
-          className="border rounded w-full p-2 mb-2"
+          className="w-full border border-gray-300 rounded-lg p-3 mb-3 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+          rows={3}
         />
         <input
           type="file"
           onChange={(e) => setFile(e.target.files[0])}
-          className="border rounded w-full p-2 mb-2"
+          className="w-full text-sm border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 
+                     file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                     file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100 mb-4"
         />
 
-        <div className="flex justify-between mt-2">
+        <div className="flex justify-between gap-4">
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="px-4 py-2 rounded bg-gray-400 text-white"
+            className="flex-1 py-2 rounded-lg bg-gray-400 text-white font-medium hover:bg-gray-500 transition"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 rounded bg-blue-600 text-white"
+            className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition"
           >
             Save
           </button>
@@ -107,43 +108,51 @@ function ProfileView({ profile }) {
 
   // ---- Normal Profile View ----
   return (
-    <div className="p-4 border rounded w-96 mx-auto mt-6 shadow">
-      <img
-        src={profile.avatarURI}
-        alt="Avatar"
-        className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
-      />
-      <h2 className="text-xl font-bold text-center">{profile.displayName}</h2>
-      <p className="text-gray-600 text-center mt-2">{profile.bio}</p>
+    <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl mx-auto mt-8">
+      {/* Avatar + Info */}
+      <div className="flex flex-col items-center text-center">
+        <img
+          src={profile.avatarURI}
+          alt="Avatar"
+          className="w-28 h-28 rounded-full border-4 border-blue-100 shadow-md object-cover mb-3"
+        />
+        <h2 className="text-2xl font-bold text-gray-800">{profile.displayName}</h2>
+        <p className="text-gray-500 text-sm mt-1">{profile.account}</p>
+        <p className="text-gray-600 mt-3 max-w-md">{profile.bio}</p>
 
-      {isOwner && (
-        <button
-          onClick={() => setEditing(true)}
-          className="mt-4 w-full px-4 py-2 rounded bg-green-600 text-white"
-        >
-          Edit Profile
-        </button>
-      )}
+        {isOwner && (
+          <button
+            onClick={() => setEditing(true)}
+            className="mt-5 px-6 py-2 rounded-lg bg-green-600 text-white font-medium shadow hover:bg-green-700 transition"
+          >
+            Edit Profile
+          </button>
+        )}
+      </div>
 
       {/* User’s Posts */}
-      <div className="mt-6">
-        <h3 className="text-lg font-bold mb-2">My Posts</h3>
-        {posts
-          .filter(
-            (post) =>
-              post.author?.toLowerCase() === profile.account?.toLowerCase()
-          )
-          .map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              account={account}
-              onUpdate={handleUpdate}
-              onDelete={handleDelete}
-              onLike={handleLike}
-              onUnlike={handleUnlike}
-            />
-          ))}
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">
+          My Posts
+        </h3>
+        <div className="flex flex-col gap-4">
+          {posts
+            .filter(
+              (post) =>
+                post.author?.toLowerCase() === profile.account?.toLowerCase()
+            )
+            .map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                account={account}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+                onLike={handleLike}
+                onUnlike={handleUnlike}
+              />
+            ))}
+        </div>
       </div>
     </div>
   );

@@ -1,12 +1,8 @@
 import React, { useContext, useState } from "react";
-import usePostsContract from "../hooks/usePost";
-import { Contract } from "ethers";
 import ContractContext from "../Contexts/Contracts";
 
-
-
 function CreatePostForm() {
-  const {postsContract} = useContext(ContractContext)
+  const { postsContract } = useContext(ContractContext);
   const [caption, setCaption] = useState("");
   const [content, setContent] = useState("");
   const [file, setFile] = useState(null);
@@ -22,7 +18,6 @@ function CreatePostForm() {
     setLoading(true);
 
     try {
-     
       let imageURI = "";
       if (file) {
         const formData = new FormData();
@@ -37,8 +32,6 @@ function CreatePostForm() {
         imageURI = data.uri;
       }
 
-
- 
       const tx = await postsContract.createPost(content, imageURI, caption);
       await tx.wait();
 
@@ -46,8 +39,6 @@ function CreatePostForm() {
       setCaption("");
       setContent("");
       setFile(null);
-
-      
     } catch (err) {
       console.error(err);
       alert("Error creating post");
@@ -59,37 +50,57 @@ function CreatePostForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 w-96 mx-auto mt-6 border p-4 rounded shadow"
+      className="bg-white rounded-xl shadow p-5 w-full"
     >
-      <h2 className="text-lg font-bold">Create Post</h2>
+      {/* Header */}
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Create Post</h2>
 
+      {/* Caption */}
       <input
         type="text"
-        placeholder="Caption"
+        placeholder="What's your caption?"
         value={caption}
         onChange={(e) => setCaption(e.target.value)}
-        className="border p-2 rounded"
+        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition"
         required
       />
 
+      {/* Content */}
       <textarea
         placeholder="Write something..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className="border p-2 rounded"
+        className="w-full border border-gray-300 rounded-lg p-3 mt-3 focus:ring-2 focus:ring-blue-500 outline-none transition resize-none"
         rows={4}
         required
       />
 
-      <input
-        type="file"
-        onChange={(e) => setFile(e.target.files?.[0] || null)}
-        className="border p-2 rounded"
-      />
+      {/* File Upload */}
+      <div className="mt-3">
+        <label className="block text-gray-600 text-sm mb-1">Upload Image</label>
+        <input
+          type="file"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          className="w-full text-sm border border-gray-300 rounded-lg file:mr-4 file:py-2 file:px-4 
+                     file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                     file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100"
+        />
+      </div>
 
+      {/* Preview */}
+      {file && (
+        <img
+          src={URL.createObjectURL(file)}
+          alt="Preview"
+          className="mt-3 w-full h-48 object-cover rounded-lg border"
+        />
+      )}
+
+      {/* Submit Button */}
       <button
         type="submit"
-        className="bg-green-500 text-white py-2 rounded disabled:opacity-50"
+        className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg font-medium shadow 
+                   hover:bg-blue-700 transition disabled:opacity-50"
         disabled={loading}
       >
         {loading ? "Posting..." : "Create Post"}
