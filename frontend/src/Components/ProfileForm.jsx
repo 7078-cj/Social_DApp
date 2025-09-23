@@ -1,12 +1,14 @@
 import React, { useContext, useState } from 'react'
 import useProfileContract from '../hooks/useProfile';
 import ContractContext from '../Contexts/Contracts';
+import { useNavigate } from 'react-router-dom';
 
 function ProfileForm() {
     const {profileContract} = useContext(ContractContext)
     const [displayName, setDisplayName] = useState("");
     const [bio, setBio] = useState("");
     const [file, setFile] = useState(null);
+    const nav = useNavigate()
 
     const handleSubmit = async (e) => {
       e.preventDefault();
@@ -31,8 +33,8 @@ function ProfileForm() {
         
         const tx = await profileContract.createProfile(displayName, bio, avatarURI);
         await tx.wait();
-
-        alert("Profile created successfully!");
+        nav('/')
+        
       } catch (err) {
         console.error(err);
         alert("Error creating profile");
