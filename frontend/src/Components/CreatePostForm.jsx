@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import usePostsContract from "../hooks/usePost";
+import { Contract } from "ethers";
+import ContractContext from "../Contexts/Contracts";
 
 
 
-function CreatePostForm({ onPostCreated }) {
+function CreatePostForm() {
+  const {postsContract} = useContext(ContractContext)
   const [caption, setCaption] = useState("");
   const [content, setContent] = useState("");
   const [file, setFile] = useState(null);
@@ -19,7 +22,7 @@ function CreatePostForm({ onPostCreated }) {
     setLoading(true);
 
     try {
-      // 1. Upload image if provided
+     
       let imageURI = "";
       if (file) {
         const formData = new FormData();
@@ -34,11 +37,9 @@ function CreatePostForm({ onPostCreated }) {
         imageURI = data.uri;
       }
 
-      
-      const contract = await usePostsContract()
 
-      // 3. Call createPost
-      const tx = await contract.createPost(content, imageURI, caption);
+ 
+      const tx = await postsContract.createPost(content, imageURI, caption);
       await tx.wait();
 
       alert("Post created successfully!");
@@ -46,7 +47,7 @@ function CreatePostForm({ onPostCreated }) {
       setContent("");
       setFile(null);
 
-      if (onPostCreated) onPostCreated(); // refresh posts
+      
     } catch (err) {
       console.error(err);
       alert("Error creating post");

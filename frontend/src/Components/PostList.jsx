@@ -1,48 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import PostCard from "./PostCard";
-import usePostsContract from "../hooks/usePost";
 import UpdatePostModal from "./UpdatePostModal";
-
+import ContractContext from "../Contexts/Contracts";
 
 function PostsList() {
-  const [posts, setPosts] = useState([]);
-  const [account, setAccount] = useState(null);
-  const [contract, setContract] = useState(null);
+  const { posts, account, postsContract } = useContext(ContractContext);
 
-  // modal state
   const [selectedPost, setSelectedPost] = useState(null);
   const [modalOpened, setModalOpened] = useState(false);
 
-  useEffect(() => {
-    const init = async () => {
-      const postsContract = await usePostsContract(setAccount);
-      setContract(postsContract);
-
-      await loadPosts(postsContract);
-    };
-    init();
-  }, []);
-
-  const loadPosts = async (postsContract) => {
-    const loadedPosts = [];
-    let id = 1;
-    try {
-      while (true) {
-        const post = await postsContract.getPost(id);
-        loadedPosts.push(post);
-        id++;
-      }
-    } catch {
-      console.log("All posts loaded.");
-    }
-    setPosts(loadedPosts);
-  };
-
   const handleDelete = async (id) => {
     try {
-      const tx = await contract.deletePost(id);
+      const tx = await postsContract.deletePost(id);
       await tx.wait();
-      await loadPosts(contract);
     } catch (err) {
       console.error(err);
     }
@@ -50,9 +20,8 @@ function PostsList() {
 
   const handleUpdate = async (id, newContent, newImage, newCaption) => {
     try {
-      const tx = await contract.updatePost(id, newContent, newImage, newCaption);
+      const tx = await postsContract.updatePost(id, newContent, newImage, newCaption);
       await tx.wait();
-      await loadPosts(contract);
     } catch (err) {
       console.error(err);
     }
@@ -60,9 +29,8 @@ function PostsList() {
 
   const handleLike = async (id) => {
     try {
-      const tx = await contract.likePost(id);
+      const tx = await postsContract.likePost(id);
       await tx.wait();
-      await loadPosts(contract);
     } catch (err) {
       console.error(err);
     }
@@ -70,9 +38,8 @@ function PostsList() {
 
   const handleUnlike = async (id) => {
     try {
-      const tx = await contract.unlikePost(id);
+      const tx = await postsContract.unlikePost(id);
       await tx.wait();
-      await loadPosts(contract);
     } catch (err) {
       console.error(err);
     }
@@ -100,7 +67,7 @@ function PostsList() {
         ))
       )}
 
-      {/* Update Modal */}
+     
       <UpdatePostModal
         opened={modalOpened}
         onClose={() => setModalOpened(false)}

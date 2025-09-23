@@ -1,43 +1,43 @@
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
 import useProfileContract from '../hooks/useProfile';
+import ContractContext from '../Contexts/Contracts';
 
 function ProfileForm() {
-
+    const {profileContract} = useContext(ContractContext)
     const [displayName, setDisplayName] = useState("");
     const [bio, setBio] = useState("");
     const [file, setFile] = useState(null);
 
     const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!file) {
-    alert("Please upload an avatar!");
-    return;
-  }
+      e.preventDefault();
+      if (!file) {
+        alert("Please upload an avatar!");
+        return;
+      }
 
-  try {
-    // 1. Upload to FastAPI
-    const formData = new FormData();
-    formData.append("file", file);
+      try {
+        // 1. Upload to FastAPI
+        const formData = new FormData();
+        formData.append("file", file);
 
-    const res = await fetch("http://localhost:8000/upload/", {
-      method: "POST",
-      body: formData,
-    });
+        const res = await fetch("http://localhost:8000/upload/", {
+          method: "POST",
+          body: formData,
+        });
 
-    const data = await res.json();
-    const avatarURI = data.uri;
+        const data = await res.json();
+        const avatarURI = data.uri;
 
-    // 2. Connect to contract
-    const contract = await useProfileContract(); // ✅ await the hook
-    const tx = await contract.updateProfile(displayName, bio, avatarURI);
-    await tx.wait();
+        
+        const tx = await profileContract.createProfile(displayName, bio, avatarURI);
+        await tx.wait();
 
-    alert("Profile created successfully!");
-  } catch (err) {
-    console.error(err);
-    alert("Error creating profile");
-  }
-}
+        alert("Profile created successfully!");
+      } catch (err) {
+        console.error(err);
+        alert("Error creating profile");
+      }
+    }
 
 
   return (

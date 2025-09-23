@@ -1,41 +1,6 @@
-import React, { useEffect, useState } from "react";
-import useProfileContract from '../hooks/useProfile';
 
-function ProfileView() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-
-        const contract = await useProfileContract();
-
-        // get connected account
-        const [account] = await window.ethereum.request({ method: "eth_requestAccounts" });
-
-        const data = await contract.getProfile(account);
-
-        setProfile({
-          displayName: data.displayName,
-          bio: data.bio,
-          avatarURI: data.avatarURI,
-        });
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        setProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, []);
-
-  if (loading) return <p>Loading profile...</p>;
-  if (!profile) return <p>No profile found. Please create one.</p>;
-
+function ProfileView({profile}) {
   return (
     <div className="p-4 border rounded w-96 mx-auto mt-6 shadow">
       <img
