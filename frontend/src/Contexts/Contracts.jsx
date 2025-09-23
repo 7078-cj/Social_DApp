@@ -26,9 +26,19 @@ export function Contracts({ children }) {
         otherAccount || account
       );
 
+      if (otherAccount){
+         const userProfile = {
+          account: account,
+          displayName: data.displayName,
+          bio: data.bio,
+          avatarURI: data.avatarURI,
+        };
+        return userProfile
+      }
+
       if (data && data.exists) {
         const userProfile = {
-          account: otherAccount || account,
+          account: account,
           displayName: data.displayName,
           bio: data.bio,
           avatarURI: data.avatarURI,
