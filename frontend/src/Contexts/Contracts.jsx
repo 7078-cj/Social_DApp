@@ -1,7 +1,7 @@
-import React, { createContext, useEffect, useState } from 'react';
-import useProfileContract from '../hooks/useProfile';
-import usePostsContract from '../hooks/usePost';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useEffect, useState } from "react";
+import useProfileContract from "../hooks/useProfile";
+import usePostsContract from "../hooks/usePost";
+import { useNavigate } from "react-router-dom";
 
 const ContractContext = createContext();
 export default ContractContext;
@@ -17,21 +17,24 @@ export function Contracts({ children }) {
   const [posts, setPosts] = useState([]);
   const nav = useNavigate();
 
+  // 🔹 Fetch profile (self or other user)
   const fetchProfile = async (otherAccount = null) => {
     try {
       setLoading(true);
-      const data = await profileContract.getProfile(otherAccount ? otherAccount : account);
+      const data = await profileContract.getProfile(
+        otherAccount ? otherAccount : account
+      );
 
       if (data && data.exists) {
         const userProfile = {
+          account: otherAccount ? otherAccount : account,
           displayName: data.displayName,
           bio: data.bio,
           avatarURI: data.avatarURI,
         };
 
         setProfile(userProfile);
-        localStorage.setItem("profile", JSON.stringify(userProfile)); 
-        
+        localStorage.setItem("profile", JSON.stringify(userProfile));
       }
     } catch (err) {
       console.error("Error fetching profile:", err);
@@ -42,6 +45,7 @@ export function Contracts({ children }) {
     }
   };
 
+  // 🔹 Init contracts
   useEffect(() => {
     const initContracts = async () => {
       try {
@@ -54,68 +58,57 @@ export function Contracts({ children }) {
         console.error("Error initializing contracts:", err);
       }
     };
-
     initContracts();
   }, []);
 
+  // 🔹 Fetch profile when contracts + account ready
   useEffect(() => {
     if (!profileContract || !account) {
       setLoading(false);
       return;
     }
-
     fetchProfile();
   }, [profileContract, account]);
 
+  // 🔹 Fetch posts
   useEffect(() => {
     if (!postsContract) return;
 
     const loadPosts = async () => {
-      const loadedPosts = [];
-      let id = 1;
       try {
-        while (true) {
-          const post = await postsContract.getPost(id);
-          loadedPosts.push(post);
-          id++;
-        }
-      } catch {
-        console.log("All posts loaded.");
+        const allPosts = await postsContract.getAllPosts();
+
+        // ✅ Normalize PostWithProfile for React
+        const mapped = allPosts.map((p) => ({
+          id: p.post.id.toString(),
+          author: p.post.author,
+          caption: p.post.caption,
+          content: p.post.content,
+          imageURI: p.post.imageURI,
+          timestamp: p.post.timestamp.toString(),
+          likes: p.post.likes.toString(),
+          profile: {
+            displayName: p.profile.displayName,
+            bio: p.profile.bio,
+            avatarURI: p.profile.avatarURI,
+            owner: p.profile.owner,
+          },
+        }));
+
+        setPosts(mapped);
+      } catch (err) {
+        console.error("Error loading posts:", err);
       }
-      setPosts(loadedPosts);
     };
 
     loadPosts();
 
-    postsContract.on("PostCreated", async (postId) => {
-      const newPost = await postsContract.getPost(postId);
-      setPosts((prev) => [...prev, newPost]);
-    });
-
-    postsContract.on("PostUpdated", async (postId) => {
-      const updatedPost = await postsContract.getPost(postId);
-      setPosts((prev) =>
-        prev.map((p) => (p.id.toString() === postId.toString() ? updatedPost : p))
-      );
-    });
-
-    postsContract.on("PostDeleted", (postId) => {
-      setPosts((prev) => prev.filter((p) => p.id.toString() !== postId.toString()));
-    });
-
-    postsContract.on("PostLiked", async (postId) => {
-      const updatedPost = await postsContract.getPost(postId);
-      setPosts((prev) =>
-        prev.map((p) => (p.id.toString() === postId.toString() ? updatedPost : p))
-      );
-    });
-
-    postsContract.on("PostUnliked", async (postId) => {
-      const updatedPost = await postsContract.getPost(postId);
-      setPosts((prev) =>
-        prev.map((p) => (p.id.toString() === postId.toString() ? updatedPost : p))
-      );
-    });
+    // Listen to events and refresh
+    postsContract.on("PostCreated", loadPosts);
+    postsContract.on("PostUpdated", loadPosts);
+    postsContract.on("PostDeleted", loadPosts);
+    postsContract.on("PostLiked", loadPosts);
+    postsContract.on("PostUnliked", loadPosts);
 
     return () => {
       postsContract.removeAllListeners("PostCreated");
@@ -133,7 +126,7 @@ export function Contracts({ children }) {
     profile,
     loading,
     posts,
-    fetchProfile
+    fetchProfile,
   };
 
   return (
