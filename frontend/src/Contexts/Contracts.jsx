@@ -19,15 +19,16 @@ export function Contracts({ children }) {
 
   // 🔹 Fetch profile (self or other user)
   const fetchProfile = async (otherAccount = null) => {
+    if (!profileContract) return;
     try {
       setLoading(true);
       const data = await profileContract.getProfile(
-        otherAccount ? otherAccount : account
+        otherAccount || account
       );
 
       if (data && data.exists) {
         const userProfile = {
-          account: otherAccount ? otherAccount : account,
+          account: otherAccount || account,
           displayName: data.displayName,
           bio: data.bio,
           avatarURI: data.avatarURI,
@@ -35,6 +36,9 @@ export function Contracts({ children }) {
 
         setProfile(userProfile);
         localStorage.setItem("profile", JSON.stringify(userProfile));
+      } else {
+        setProfile(null);
+        localStorage.removeItem("profile");
       }
     } catch (err) {
       console.error("Error fetching profile:", err);
@@ -63,11 +67,11 @@ export function Contracts({ children }) {
 
   // 🔹 Fetch profile when contracts + account ready
   useEffect(() => {
-    if (!profileContract || !account) {
+    if (profileContract && account) {
+      fetchProfile();
+    } else {
       setLoading(false);
-      return;
     }
-    fetchProfile();
   }, [profileContract, account]);
 
   // 🔹 Fetch posts
@@ -78,7 +82,6 @@ export function Contracts({ children }) {
       try {
         const allPosts = await postsContract.getAllPosts();
 
-        // ✅ Normalize PostWithProfile for React
         const mapped = allPosts.map((p) => ({
           id: p.post.id.toString(),
           author: p.post.author,
@@ -103,7 +106,6 @@ export function Contracts({ children }) {
 
     loadPosts();
 
-    // Listen to events and refresh
     postsContract.on("PostCreated", loadPosts);
     postsContract.on("PostUpdated", loadPosts);
     postsContract.on("PostDeleted", loadPosts);
@@ -119,21 +121,22 @@ export function Contracts({ children }) {
     };
   }, [postsContract]);
 
+  // 🔹 Actions
   const handleDelete = async (id) => {
     try {
       const tx = await postsContract.deletePost(id);
       await tx.wait();
     } catch (err) {
-      console.error(err);
+      console.error("Delete error:", err);
     }
   };
 
-  const handleUpdate = async (id, newContent, newImage, newCaption) => {
+  const handleUpdate = async (id, caption, content, imageURI) => {
     try {
-      const tx = await postsContract.updatePost(id, newContent, newImage, newCaption);
+      const tx = await postsContract.updatePost(id, caption, content, imageURI);
       await tx.wait();
     } catch (err) {
-      console.error(err);
+      console.error("Update error:", err);
     }
   };
 
@@ -142,7 +145,7 @@ export function Contracts({ children }) {
       const tx = await postsContract.likePost(id);
       await tx.wait();
     } catch (err) {
-      console.error(err);
+      console.error("Like error:", err);
     }
   };
 
@@ -151,7 +154,7 @@ export function Contracts({ children }) {
       const tx = await postsContract.unlikePost(id);
       await tx.wait();
     } catch (err) {
-      console.error(err);
+      console.error("Unlike error:", err);
     }
   };
 
@@ -160,6 +163,7 @@ export function Contracts({ children }) {
     postsContract,
     account,
     profile,
+    setProfile, 
     loading,
     posts,
     fetchProfile,

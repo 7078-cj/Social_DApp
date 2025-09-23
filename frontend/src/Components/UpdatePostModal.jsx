@@ -27,7 +27,7 @@ function UpdatePostModal({ opened, onClose, post, onUpdate }) {
     setLoading(true);
 
     try {
-      // 1. Upload image if new file selected
+      // 1. Upload new image if selected
       let imageURI = image;
       if (file) {
         const formData = new FormData();
@@ -42,16 +42,16 @@ function UpdatePostModal({ opened, onClose, post, onUpdate }) {
         imageURI = data.uri;
       }
 
-      // 2. Call parent update handler
-      await onUpdate(post.id, content, imageURI, caption);
+      // 2. Call parent update handler (fix param order!)
+      await onUpdate(post.id, caption, content, imageURI);
 
       onClose();
     } catch (err) {
-      console.error(err);
+      console.error("Error updating post:", err);
       alert("Error updating post");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -71,13 +71,21 @@ function UpdatePostModal({ opened, onClose, post, onUpdate }) {
           required
         />
 
-        {/* Show current image preview if available */}
-        {image && !file && (
+        {/* Current or new image preview */}
+        {file ? (
           <img
-            src={image}
-            alt="Current"
+            src={URL.createObjectURL(file)}
+            alt="New"
             className="w-full h-40 object-cover rounded border"
           />
+        ) : (
+          image && (
+            <img
+              src={image}
+              alt="Current"
+              className="w-full h-40 object-cover rounded border"
+            />
+          )
         )}
 
         <input

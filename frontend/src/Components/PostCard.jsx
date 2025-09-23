@@ -1,5 +1,9 @@
+import React, { useState } from "react";
+import UpdatePostModal from "./UpdatePostModal";
+
 function PostCard({ post, account, onUpdate, onDelete, onLike, onUnlike }) {
   const isAuthor = post.author.toLowerCase() === account?.toLowerCase();
+  const [updateOpen, setUpdateOpen] = useState(false);
 
   return (
     <div className="border p-4 rounded mb-4 shadow">
@@ -28,23 +32,43 @@ function PostCard({ post, account, onUpdate, onDelete, onLike, onUnlike }) {
 
       {isAuthor ? (
         <div className="flex gap-2 mt-2">
-          <button onClick={() => onUpdate(post.id)} className="bg-yellow-500 text-white px-3 py-1 rounded">
+          <button
+            onClick={() => setUpdateOpen(true)}
+            className="bg-yellow-500 text-white px-3 py-1 rounded"
+          >
             Update
           </button>
-          <button onClick={() => onDelete(post.id)} className="bg-red-500 text-white px-3 py-1 rounded">
+          <button
+            onClick={() => onDelete(post.id)}
+            className="bg-red-500 text-white px-3 py-1 rounded"
+          >
             Delete
           </button>
         </div>
       ) : (
         <div className="flex gap-2 mt-2">
-          <button onClick={() => onLike(post.id)} className="bg-blue-500 text-white px-3 py-1 rounded">
+          <button
+            onClick={() => onLike(post.id)}
+            className="bg-blue-500 text-white px-3 py-1 rounded"
+          >
             Like
           </button>
-          <button onClick={() => onUnlike(post.id)} className="bg-gray-500 text-white px-3 py-1 rounded">
+          <button
+            onClick={() => onUnlike(post.id)}
+            className="bg-gray-500 text-white px-3 py-1 rounded"
+          >
             Unlike
           </button>
         </div>
       )}
+
+      {/* 🔹 Update Post Modal */}
+      <UpdatePostModal
+        opened={updateOpen}
+        onClose={() => setUpdateOpen(false)}
+        post={post}
+        onUpdate={onUpdate}
+      />
     </div>
   );
 }
