@@ -1,22 +1,34 @@
 import React, { useState } from "react";
 import UpdatePostModal from "./UpdatePostModal";
-import { Heart, MessageCircle, Edit, Trash2, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Heart, Edit, Trash2, ThumbsUp, ThumbsDown } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-function PostCard({ post, account,  onDelete, onLike, onUnlike }) {
+function PostCard({ post, account, onDelete, onLike, onUnlike }) {
   const isAuthor = post.author.toLowerCase() === account?.toLowerCase();
   const [updateOpen, setUpdateOpen] = useState(false);
+  const navigate = useNavigate();
+
+  
+  const handleProfileClick = () => {
+    navigate(`/profile/${post.author}`);
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-md p-5 mb-6 hover:shadow-lg transition">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
+      <div
+        className="flex items-center gap-3 mb-4 cursor-pointer"
+        onClick={handleProfileClick}
+      >
         <img
           src={post.profile.avatarURI}
           alt="avatar"
           className="w-12 h-12 rounded-full object-cover border"
         />
         <div>
-          <p className="font-semibold text-gray-800">{post.profile.displayName}</p>
+          <p className="font-semibold text-gray-800 hover:underline">
+            {post.profile.displayName}
+          </p>
           <p className="text-xs text-gray-500">{post.author}</p>
         </div>
       </div>
@@ -80,7 +92,6 @@ function PostCard({ post, account,  onDelete, onLike, onUnlike }) {
         opened={updateOpen}
         onClose={() => setUpdateOpen(false)}
         post={post}
-        
       />
     </div>
   );

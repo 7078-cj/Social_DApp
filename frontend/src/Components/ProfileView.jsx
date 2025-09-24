@@ -1,12 +1,14 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import ContractContext from "../Contexts/Contracts";
 import PostCard from "./PostCard";
+import Header from "./Header";
 
-function ProfileView({ profile }) {
+function ProfileView({ userProfile, userPosts }) {
   const {
     account,
+    profile,
+    postsContract,
     profileContract,
-    posts,
     fetchProfile,
     handleDelete,
     handleLike,
@@ -14,13 +16,19 @@ function ProfileView({ profile }) {
     handleUpdate,
   } = useContext(ContractContext);
 
+  
   const [editing, setEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(profile?.displayName || "");
-  const [bio, setBio] = useState(profile?.bio || "");
+  const [displayName, setDisplayName] = useState(userProfile?.displayName || "");
+  const [bio, setBio] = useState(userProfile?.bio || "");
   const [file, setFile] = useState(null);
+  
 
   const isOwner =
-    account && profile && account.toLowerCase() === profile.account?.toLowerCase();
+    profile.displayName && userProfile && profile.displayName.toLowerCase() === userProfile.displayName?.toLowerCase();
+
+
+  // 🔹 Fetch only this user's posts from contract
+  
 
   // ---- Profile Update ----
   const handleSubmit = async (e) => {
@@ -47,6 +55,7 @@ function ProfileView({ profile }) {
 
       await fetchProfile(account);
       setEditing(false);
+      fetchUserPosts(); // refresh posts in case avatar changed
       alert("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
@@ -109,16 +118,17 @@ function ProfileView({ profile }) {
   // ---- Normal Profile View ----
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl mx-auto mt-8">
+      <Header/>
       {/* Avatar + Info */}
       <div className="flex flex-col items-center text-center">
         <img
-          src={profile.avatarURI}
+          src={userProfile.avatarURI}
           alt="Avatar"
           className="w-28 h-28 rounded-full border-4 border-blue-100 shadow-md object-cover mb-3"
         />
-        <h2 className="text-2xl font-bold text-gray-800">{profile.displayName}</h2>
-        <p className="text-gray-500 text-sm mt-1">{profile.account}</p>
-        <p className="text-gray-600 mt-3 max-w-md">{profile.bio}</p>
+        <h2 className="text-2xl font-bold text-gray-800">{userProfile.displayName}</h2>
+        <p className="text-gray-500 text-sm mt-1">{userProfile.account}</p>
+        <p className="text-gray-600 mt-3 max-w-md">{userProfile.bio}</p>
 
         {isOwner && (
           <button
@@ -136,12 +146,8 @@ function ProfileView({ profile }) {
           My Posts
         </h3>
         <div className="flex flex-col gap-4">
-          {posts
-            .filter(
-              (post) =>
-                post.author?.toLowerCase() === profile.account?.toLowerCase()
-            )
-            .map((post) => (
+          {userPosts.length > 0 ? (
+            userPosts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -151,7 +157,12 @@ function ProfileView({ profile }) {
                 onLike={handleLike}
                 onUnlike={handleUnlike}
               />
-            ))}
+            ))
+          ) : (
+            <p className="text-gray-500 italic text-center">
+              No posts yet.
+            </p>
+          )}
         </div>
       </div>
     </div>
