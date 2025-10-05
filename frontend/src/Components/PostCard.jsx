@@ -246,7 +246,7 @@ function PostCard({ post }) {
 
       {/* Token Info */}
       <div className="mt-4 text-xs text-gray-500 text-right">
-        💰 Your Balance: {tokenBalance} PTKN
+        Price: {post.price} PTKN
       </div>
     </div>
   );
