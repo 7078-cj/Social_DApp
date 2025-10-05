@@ -32,7 +32,7 @@ function CreatePostForm() {
         imageURI = data.uri;
       }
 
-      const tx = await postsContract.createPost(content, imageURI, caption);
+      const tx = await postsContract.createPost(caption,content, imageURI, false)
       await tx.wait();
 
       alert("Post created successfully!");

@@ -186,7 +186,7 @@ function ProfileView({ userProfile }) {
         {/* ✅ Token Balance Display */}
         {isOwner && (
           <div className="mt-4 bg-blue-50 px-4 py-2 rounded-lg text-blue-700 font-semibold shadow-sm">
-            💰 Token Balance: {tokenBalance}
+            💰 Token Balance: {userProfile.balance}
           </div>
         )}
 

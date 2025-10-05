@@ -1,11 +1,11 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, use, useEffect, useState } from "react";
 import useProfileContract from "../hooks/useProfile";
 import usePostsContract from "../hooks/usePost";
 import useCommentsContract from "../hooks/useComments";
 import usePlatformTokenContract from "../hooks/usePlatformToken";
-import useSocialPlatformContract from "../hooks/useSocialPlatform";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast"; // Optional for visual feedback
+import toast from "react-hot-toast";
+
 
 const ContractContext = createContext();
 export default ContractContext;
@@ -15,7 +15,6 @@ export function Contracts({ children }) {
   const [postsContract, setPostsContract] = useState();
   const [commentsContract, setCommentsContract] = useState();
   const [tokenContract, setTokenContract] = useState();
-  const [socialPlatformContract, setSocialPlatformContract] = useState();
 
   const [account, setAccount] = useState();
   const [profile, setProfile] = useState(
@@ -28,23 +27,46 @@ export function Contracts({ children }) {
 
   const nav = useNavigate();
 
-  // 🔹 Fetch profile
+  // Initialize contracts
+  useEffect(() => {
+    const initContracts = async () => {
+      try {
+        const profileC = await useProfileContract();
+        setProfileContract(profileC);
+
+        const postsC = await usePostsContract(setAccount);
+        setPostsContract(postsC);
+        console.log("Posts Contract:", postsC);
+        console.log("Account:", account);
+
+        const commentsC = await useCommentsContract();
+        setCommentsContract(commentsC);
+
+        const tokenC = await usePlatformTokenContract();
+        setTokenContract(tokenC);
+      } catch (err) {
+        console.error("Error initializing contracts:", err);
+      }
+    };
+    initContracts();
+  }, []);
+
+  // Fetch profile
   const fetchProfile = async (otherAccount = null) => {
     if (!profileContract) return;
     try {
       setLoading(true);
       const target = otherAccount || account;
       const data = await profileContract.getProfile(target);
-
       const userProfile = {
         account: target,
         displayName: data.displayName,
         bio: data.bio,
         avatarURI: data.avatarURI,
+        balance: data.balance?.toString?.() ?? "0",
+        exists: data.exists,
       };
-
       if (otherAccount) return userProfile;
-
       if (data && data.exists) {
         setProfile(userProfile);
         localStorage.setItem("profile", JSON.stringify(userProfile));
@@ -61,118 +83,59 @@ export function Contracts({ children }) {
     }
   };
 
-  // 🔹 Initialize contracts
   useEffect(() => {
-    const initContracts = async () => {
-      try {
-        const profile_contract = await useProfileContract();
-        setProfileContract(profile_contract);
+    fetchProfile();
+  }, [account]);
 
-        const posts_contract = await usePostsContract(setAccount);
-        setPostsContract(posts_contract);
-
-        const comments_contract = await useCommentsContract();
-        setCommentsContract(comments_contract);
-
-        const token_contract = await usePlatformTokenContract();
-        setTokenContract(token_contract);
-
-        const social_contract = await useSocialPlatformContract();
-        setSocialPlatformContract(social_contract);
-      } catch (err) {
-        console.error("Error initializing contracts:", err);
-      }
-    };
-    initContracts();
-  }, []);
-
-  // 🔹 Fetch profile once ready
-  useEffect(() => {
-    if (profileContract && account) {
-      fetchProfile();
-    } else {
-      setLoading(false);
-    }
-  }, [profileContract, account]);
-
-  // 🔹 Fetch posts
-  useEffect(() => {
+  // Fetch posts
+  const fetchPosts = async () => {
     if (!postsContract) return;
+    try {
+      const allPosts = await postsContract.getAllPosts();
+      const mapped = allPosts.map((entry) => ({
+        id: entry.post.id?.toString?.() ?? "0",
+        author: entry.post.author ?? "0x0",
+        caption: entry.post.caption ?? "",
+        content: entry.post.content ?? "",
+        imageURI: entry.post.imageURI ?? "",
+        timestamp: entry.post.timestamp?.toString?.() ?? "0",
+        likes: entry.post.likes?.toString?.() ?? "0",
+        commentsCount: entry.post.commentsCount?.toString?.() ?? "0",
+        price: entry.post.price?.toString?.() ?? "0",
+        owner: entry.post.owner ?? "0x0",
+        sellable: entry.post.sellable ?? false,
+        profile: entry.profile ? {
+          account: entry.profile.account,
+          displayName: entry.profile.displayName,
+          bio: entry.profile.bio,
+          avatarURI: entry.profile.avatarURI,
+        } : null,
+      }));
+      setPosts(mapped);
+    } catch (err) {
+      console.error("Error fetching posts:", err);
+    }
+  };
 
-    const loadPosts = async () => {
-      try {
-        const allPosts = await postsContract.getAllPosts();
-        const mapped = allPosts.map((p) => ({
-          id: p.post?.id?.toString?.() ?? "0",
-          author: p.post?.author ?? "0x0",
-          caption: p.post?.caption ?? "",
-          content: p.post?.content ?? "",
-          imageURI: p.post?.imageURI ?? "",
-          timestamp: p.post?.timestamp?.toString?.() ?? "0",
-          likes: p.post?.likes?.toString?.() ?? "0",
-          price: p.post?.price?.toString?.() ?? "0",
-          profile: {
-            displayName: p.profile?.displayName ?? "",
-            bio: p.profile?.bio ?? "",
-            avatarURI: p.profile?.avatarURI ?? "",
-            owner: p.profile?.owner ?? "0x0",
-          },
-        }));
 
-        setPosts(mapped);
-      } catch (err) {
-        console.error("Error loading posts:", err);
-      }
-    };
 
-    loadPosts();
-
-    const handlers = {
-      PostCreated: loadPosts,
-      PostUpdated: loadPosts,
-      PostDeleted: loadPosts,
-      PostLiked: loadPosts,
-      PostUnliked: loadPosts,
-    };
-
-    Object.entries(handlers).forEach(([event, fn]) =>
-      postsContract.on(event, fn)
-    );
-
-    return () => {
-      Object.entries(handlers).forEach(([event, fn]) =>
-        postsContract.off(event, fn)
-      );
-    };
-  }, [postsContract]);
-
-  // 🔹 Fetch comments for posts
+  // Fetch comments
   const fetchComments = async (postId) => {
     if (!commentsContract) return [];
     try {
       const allComments = await commentsContract.getComments(postId);
-      if (!Array.isArray(allComments)) return [];
-
-      const formatted = allComments
-        .map((c) => {
-          const commentData = c.comment ?? c;
-          if (!commentData.id) return null;
-
-          return {
-            id: commentData.id.toString(),
-            author: commentData.author ?? "0x0",
-            content: commentData.content ?? "",
-            timestamp: commentData.timestamp?.toString?.() ?? "0",
-            profile: {
-              displayName: c.profile?.displayName ?? "",
-              bio: c.profile?.bio ?? "",
-              avatarURI: c.profile?.avatarURI ?? "",
-              owner: c.profile?.owner ?? "0x0",
-            },
-          };
-        })
-        .filter((item) => item !== null);
-
+      const formatted = allComments.map((entry) => ({
+        id: entry.comment.id?.toString?.() ?? "0",
+        author: entry.comment.author ?? "0x0",
+        content: entry.comment.content ?? "",
+        timestamp: entry.comment.timestamp?.toString?.() ?? "0",
+        profile: entry.profile ? {
+          account: entry.profile.account,
+          displayName: entry.profile.displayName,
+          bio: entry.profile.bio,
+          avatarURI: entry.profile.avatarURI,
+        } : null,
+      }));
       setComments(formatted);
       return formatted;
     } catch (err) {
@@ -181,50 +144,11 @@ export function Contracts({ children }) {
     }
   };
 
-  // 🔹 Comment event listeners
   useEffect(() => {
-    if (!commentsContract) return;
+    fetchPosts();
+  }, [postsContract]);
 
-    const onCommentAdded = async () => {
-      if (postsContract) {
-        try {
-          const allPosts = await postsContract.getAllPosts();
-          const mapped = allPosts.map((p) => ({
-            id: p.post?.id?.toString?.() ?? "0",
-            author: p.post?.author ?? "0x0",
-            caption: p.post?.caption ?? "",
-            content: p.post?.content ?? "",
-            imageURI: p.post?.imageURI ?? "",
-            timestamp: p.post?.timestamp?.toString?.() ?? "0",
-            likes: p.post?.likes?.toString?.() ?? "0",
-            price: p.post?.price?.toString?.() ?? "0",
-            profile: {
-              displayName: p.profile?.displayName ?? "",
-              bio: p.profile?.bio ?? "",
-              avatarURI: p.profile?.avatarURI ?? "",
-              owner: p.profile?.owner ?? "0x0",
-            },
-          }));
-          setPosts(mapped);
-        } catch {}
-      }
-    };
-
-    const onCommentUpdated = () => fetchTokenBalance();
-    const onCommentDeleted = () => fetchTokenBalance();
-
-    commentsContract.on("CommentAdded", onCommentAdded);
-    commentsContract.on("CommentUpdated", onCommentUpdated);
-    commentsContract.on("CommentDeleted", onCommentDeleted);
-
-    return () => {
-      commentsContract.off("CommentAdded", onCommentAdded);
-      commentsContract.off("CommentUpdated", onCommentUpdated);
-      commentsContract.off("CommentDeleted", onCommentDeleted);
-    };
-  }, [commentsContract, postsContract]);
-
-  // 🔹 Token balance
+  // Fetch token balance
   const fetchTokenBalance = async () => {
     if (!tokenContract || !account) return;
     try {
@@ -234,168 +158,126 @@ export function Contracts({ children }) {
       console.error("Error fetching token balance:", err);
     }
   };
+  useEffect(() => {
+    fetchTokenBalance();
+  }, [tokenContract, account]);
 
-  // 🔹 Optimistic Post Delete
-  const handleDelete = async (id) => {
+  // Post operations
+  const handleDeletePost = async (postId) => {
     if (!postsContract) return;
-    const prevPosts = [...posts];
-    setPosts((prev) => prev.filter((p) => p.id !== id));
-
+    const prev = [...posts];
+    setPosts((p) => p.filter((x) => x.id !== postId));
     try {
-      const tx = await postsContract.deletePost(id);
-      toast.loading("Deleting post...");
+      const tx = await postsContract.deletePost(postId);
       await tx.wait();
-      toast.dismiss();
       toast.success("Post deleted!");
     } catch (err) {
-      console.error("Delete error:", err);
-      setPosts(prevPosts);
-      toast.dismiss();
+      setPosts(prev);
       toast.error("Failed to delete post!");
     }
   };
 
-  // 🔹 Optimistic Post Update
-  const handleUpdate = async (id, caption, content, imageURI) => {
+  const handleUpdatePost = async (postId, caption, content, imageURI) => {
     if (!postsContract) return;
-    const prevPosts = [...posts];
-    setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, caption, content, imageURI } : p))
+    const prev = [...posts];
+    setPosts((p) =>
+      p.map((x) => (x.id === postId ? { ...x, caption, content, imageURI } : x))
     );
-
     try {
-      const tx = await postsContract.updatePost(id, caption, content, imageURI);
-      toast.loading("Updating post...");
+      const tx = await postsContract.updatePost(postId, caption, content, imageURI);
       await tx.wait();
-      toast.dismiss();
       toast.success("Post updated!");
     } catch (err) {
-      console.error("Update error:", err);
-      setPosts(prevPosts);
-      toast.dismiss();
+      setPosts(prev);
       toast.error("Failed to update post!");
     }
   };
 
-  // 🔹 Like / Unlike
-  const handleLike = async (id) => {
-    if (!socialPlatformContract) return;
-    try {
-      const tx = await socialPlatformContract.likePost(id);
-      await tx.wait();
-      await fetchTokenBalance();
-    } catch (err) {
-      console.error("Like error:", err);
-    }
-  };
-
-  const handleUnlike = async (id) => {
+  const toggleSellable = async (postId, sellable) => {
     if (!postsContract) return;
     try {
-      const tx = await postsContract.unlikePost(id);
+      const tx = await postsContract.setSellable(postId, sellable);
       await tx.wait();
+      toast.success("Sellable status updated!");
+      fetchPosts();
     } catch (err) {
-      console.error("Unlike error:", err);
+      console.error(err);
+      toast.error("Failed to update sellable!");
     }
   };
 
-  // 🔹 Comment Add / Update / Delete
+  const buyPost = async (postId, price) => {
+    if (!postsContract) return;
+    try {
+      const tx = await postsContract.buyPost(postId, { value: price });
+      await tx.wait();
+      toast.success("Post bought!");
+      fetchPosts();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to buy post!");
+    }
+  };
+
+  const likePost = async (postId) => {
+    if (!postsContract) return;
+    try {
+      const tx = await postsContract.likePost(postId);
+      await tx.wait();
+      fetchPosts();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Comment operations
   const addComment = async (postId, content) => {
     if (!commentsContract) return;
     try {
       const tx = await commentsContract.addComment(postId, content);
-      toast.loading("Adding comment...");
       await tx.wait();
-      toast.dismiss();
       toast.success("Comment added!");
-      await fetchComments(postId);
-      await fetchTokenBalance();
+      fetchComments(postId);
+      fetchPosts();
     } catch (err) {
-      console.error("Add comment error:", err);
-      toast.dismiss();
+      console.error(err);
       toast.error("Failed to add comment!");
     }
   };
 
-  // 🔹 Optimistic Comment Update
-  const updateComment = async (commentId, newContent) => {
+  const updateComment = async (commentId, content, postId) => {
     if (!commentsContract) return;
-    const prevComments = [...comments];
-    setComments((prev) =>
-      prev.map((c) =>
-        c.id === commentId ? { ...c, content: newContent } : c
-      )
-    );
-
     try {
-      const tx = await commentsContract.updateComment(commentId, newContent);
-      toast.loading("Updating comment...");
+      const tx = await commentsContract.updateComment(commentId, content);
       await tx.wait();
-      toast.dismiss();
       toast.success("Comment updated!");
-      await fetchTokenBalance();
+      fetchComments(postId);
     } catch (err) {
-      console.error("Update comment error:", err);
-      setComments(prevComments);
-      toast.dismiss();
+      console.error(err);
       toast.error("Failed to update comment!");
     }
   };
 
-  // 🔹 Optimistic Comment Delete
-  const deleteComment = async (commentId) => {
+  const deleteComment = async (commentId, postId) => {
     if (!commentsContract) return;
-    const prevComments = [...comments];
-    setComments((prev) => prev.filter((c) => c.id !== commentId));
-
     try {
       const tx = await commentsContract.deleteComment(commentId);
-      toast.loading("Deleting comment...");
       await tx.wait();
-      toast.dismiss();
       toast.success("Comment deleted!");
+      fetchComments(postId);
+      fetchPosts();
     } catch (err) {
-      console.error("Delete comment error:", err);
-      setComments(prevComments);
-      toast.dismiss();
+      console.error(err);
       toast.error("Failed to delete comment!");
     }
   };
 
-  // 🔹 Token mint
-  const mintTokens = async (to, amount) => {
-    if (!socialPlatformContract) return;
-    try {
-      const tx = await socialPlatformContract.mintTokens(to, amount);
-      await tx.wait();
-      await fetchTokenBalance();
-    } catch (err) {
-      console.error("Mint token error:", err);
-    }
-  };
-
-  // 🔹 Token events
-  useEffect(() => {
-    if (!socialPlatformContract) return;
-
-    const onTokensMinted = () => fetchTokenBalance();
-    const onCommentRewarded = () => fetchTokenBalance();
-
-    socialPlatformContract.on("TokensMinted", onTokensMinted);
-    socialPlatformContract.on("CommentRewarded", onCommentRewarded);
-
-    return () => {
-      socialPlatformContract.off("TokensMinted", onTokensMinted);
-      socialPlatformContract.off("CommentRewarded", onCommentRewarded);
-    };
-  }, [socialPlatformContract, tokenContract, account]);
-
+  // Context value
   const context = {
     profileContract,
     postsContract,
     commentsContract,
     tokenContract,
-    socialPlatformContract,
     account,
     profile,
     setProfile,
@@ -404,16 +286,17 @@ export function Contracts({ children }) {
     comments,
     tokenBalance,
     fetchProfile,
+    fetchPosts,
     fetchComments,
     fetchTokenBalance,
-    handleDelete,
-    handleUpdate,
-    handleLike,
-    handleUnlike,
+    handleDeletePost,
+    handleUpdatePost,
+    toggleSellable,
+    buyPost,
+    likePost,
     addComment,
     updateComment,
     deleteComment,
-    mintTokens,
   };
 
   return (
