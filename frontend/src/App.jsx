@@ -6,6 +6,7 @@ import PrivateRoutes from './Contexts/PrivateRoutes'
 import Home from './Pages/Home'
 import ProfilePage from './Pages/ProfilePage'
 import PublicRoutes from './Contexts/PublicRoutes'
+import { Toaster } from "react-hot-toast";
 
 function App() {
   
@@ -29,6 +30,7 @@ function App() {
           </Routes>
         </Contracts>
       </Router>
+      <Toaster position="bottom-right" />
     </>
   )
 }

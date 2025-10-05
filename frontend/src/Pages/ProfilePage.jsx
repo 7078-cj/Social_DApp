@@ -15,6 +15,7 @@ function ProfilePage() {
       if (!postsContract || !targetAccount) return;
 
       const rawPosts = await postsContract.getUserPosts(targetAccount);
+     
 
       const formatted = rawPosts.map((p) => ({
         id: Number(p.post.id),
@@ -24,6 +25,7 @@ function ProfilePage() {
         imageURI: p.post.imageURI,
         timestamp: Number(p.post.timestamp),
         likes: Number(p.post.likes),
+        price: Number(p.post.price),
         profile: {
           displayName: p.profile.displayName,
           bio: p.profile.bio,
@@ -31,12 +33,16 @@ function ProfilePage() {
           account: p.profile.account,
         },
       }));
-
+     
+      
       setUserPosts(formatted);
+      
     } catch (err) {
       console.error("Error fetching user posts:", err);
     }
   };
+  
+    
 
   // Load profile & posts when `account` changes
   useEffect(() => {
@@ -59,10 +65,12 @@ function ProfilePage() {
     
   }, [account, profile, postsContract]);
   
+  
 
   return (
     <div>
       <ProfileView userProfile={otherAccount ? otherAccount : profile} userPosts={userPosts} />
+      
     </div>
   );
 }

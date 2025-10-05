@@ -3,67 +3,119 @@ import ContractContext from "../Contexts/Contracts";
 import PostCard from "./PostCard";
 import Header from "./Header";
 
-function ProfileView({ userProfile, userPosts }) {
+function ProfileView({ userProfile }) {
   const {
     account,
-    profile,
     postsContract,
     profileContract,
+    commentsContract,
     fetchProfile,
     handleDelete,
     handleLike,
     handleUnlike,
     handleUpdate,
+    handleAddComment,
+    tokenBalance,          // ✅ added from context
+    fetchTokenBalance,     // ✅ added to refresh balance
   } = useContext(ContractContext);
 
-  
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(userProfile?.displayName || "");
   const [bio, setBio] = useState(userProfile?.bio || "");
   const [file, setFile] = useState(null);
-  
+  const [userPosts, setUserPosts] = useState([]);
 
   const isOwner =
-    profile.displayName && userProfile && profile.displayName.toLowerCase() === userProfile.displayName?.toLowerCase();
+    account && userProfile?.account?.toLowerCase() === account.toLowerCase();
 
+  // ✅ Fetch user posts
+  const loadUserPosts = async () => {
+    if (!postsContract || !userProfile) return;
+    try {
+      const posts = await postsContract.getUserPosts(userProfile.account);
 
-  // 🔹 Fetch only this user's posts from contract
-  
+      const mapped = posts.map((p) => ({
+        id: p.post.id.toString(),
+        author: p.post.author,
+        caption: p.post.caption,
+        content: p.post.content,
+        imageURI: p.post.imageURI,
+        timestamp: p.post.timestamp.toString(),
+        likes: p.post.likes.toString(),
+        price: p.post.price.toString(),
+        profile: {
+          displayName: p.profile.displayName,
+          bio: p.profile.bio,
+          avatarURI: p.profile.avatarURI,
+          owner: p.profile.owner,
+        },
+      }));
+
+      setUserPosts(mapped);
+
+      // Fetch comments for each post (optional, for debugging)
+      const formatted = await Promise.all(
+        posts.map(async (p) => {
+          const comments = await commentsContract.getComments(p.id);
+          return { ...p, comments };
+        })
+      );
+      setUserPosts(formatted);
+    } catch (err) {
+      console.error("Error fetching user posts:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadUserPosts();
+    fetchTokenBalance(); // ✅ Load balance whenever profile changes
+
+    // Listen for new comments or post updates
+    if (commentsContract) {
+      commentsContract.on("CommentAdded", () => loadUserPosts());
+    }
+    if (postsContract) {
+      postsContract.on("PostUpdated", () => loadUserPosts());
+    }
+
+    return () => {
+      commentsContract?.removeAllListeners("CommentAdded");
+      postsContract?.removeAllListeners("PostUpdated");
+    };
+  }, [postsContract, commentsContract, userProfile]);
 
   // ---- Profile Update ----
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      alert("Please upload an avatar!");
-      return;
-    }
-
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      let avatarURI = userProfile.avatarURI;
+      if (file) {
+        const formData = new FormData();
+        formData.append("file", file);
 
-      const res = await fetch("http://localhost:8000/upload/", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      const avatarURI = data.uri;
+        const res = await fetch("http://localhost:8000/upload/", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        avatarURI = data.uri;
+      }
 
       const tx = await profileContract.updateProfile(displayName, bio, avatarURI);
       await tx.wait();
 
       await fetchProfile(account);
+      await fetchTokenBalance(); // ✅ Refresh balance after profile update
       setEditing(false);
-      fetchUserPosts(); // refresh posts in case avatar changed
-      alert("Profile updated successfully!");
+      await loadUserPosts();
+      alert("✅ Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
-      alert("Error updating profile");
+      alert("❌ Error updating profile");
     }
   };
 
-  // ---- Editing Mode ----
+  // ---- Edit Mode ----
   if (editing) {
     return (
       <form
@@ -118,8 +170,9 @@ function ProfileView({ userProfile, userPosts }) {
   // ---- Normal Profile View ----
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl mx-auto mt-8">
-      <Header/>
-      {/* Avatar + Info */}
+      <Header />
+
+      {/* Profile Info */}
       <div className="flex flex-col items-center text-center">
         <img
           src={userProfile.avatarURI}
@@ -129,6 +182,13 @@ function ProfileView({ userProfile, userPosts }) {
         <h2 className="text-2xl font-bold text-gray-800">{userProfile.displayName}</h2>
         <p className="text-gray-500 text-sm mt-1">{userProfile.account}</p>
         <p className="text-gray-600 mt-3 max-w-md">{userProfile.bio}</p>
+
+        {/* ✅ Token Balance Display */}
+        {isOwner && (
+          <div className="mt-4 bg-blue-50 px-4 py-2 rounded-lg text-blue-700 font-semibold shadow-sm">
+            💰 Token Balance: {tokenBalance}
+          </div>
+        )}
 
         {isOwner && (
           <button
@@ -140,11 +200,12 @@ function ProfileView({ userProfile, userPosts }) {
         )}
       </div>
 
-      {/* User’s Posts */}
+      {/* Posts Section */}
       <div className="mt-8">
         <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">
-          My Posts
+          {isOwner ? "My Posts" : "Posts"}
         </h3>
+
         <div className="flex flex-col gap-4">
           {userPosts.length > 0 ? (
             userPosts.map((post) => (
@@ -156,12 +217,11 @@ function ProfileView({ userProfile, userPosts }) {
                 onDelete={handleDelete}
                 onLike={handleLike}
                 onUnlike={handleUnlike}
+                onAddComment={handleAddComment}
               />
             ))
           ) : (
-            <p className="text-gray-500 italic text-center">
-              No posts yet.
-            </p>
+            <p className="text-gray-500 italic text-center">No posts yet.</p>
           )}
         </div>
       </div>
